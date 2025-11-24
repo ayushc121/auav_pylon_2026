@@ -107,7 +107,7 @@ class TECSControl_cub:
                + self.weight * ( self.param.K_thrustp * (gamma_est + vdot_est / self.g)
                                  + self.param.K_thrusti * self.error_norm_Es_dot_integral ) )
 
-        thrust = float(np.clip(thrust_unsat, 0.0, self.thr_max))
+        thrust = float(np.clip(thrust_unsat + 0.2, 0.0, self.thr_max))
 
         # Thrust anti-windup
         # If at upper limit and error > 0, integrating would push further into sat -> freeze integral.
@@ -261,8 +261,11 @@ class TECSControl_cub:
 
 
         # #-------------------Coordinated Turn Control-------------------#
-        rud_cmd = 0
-        rud_cmd = np.clip(rud_cmd,-1,1)
+        if (np.abs(ail_cmd) >= 0.2):
+            rud_cmd = ail_cmd*0.15
+            rud_cmd = np.clip(rud_cmd,-1,1)
+        else: rud_cmd = 0
+
         #Set history variables
         self.prev_x = x
         self.prev_y = y
