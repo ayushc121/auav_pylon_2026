@@ -74,21 +74,19 @@ class XTrack_NAV_lookAhead:
         return des_gamma, des_heading, wp_err
 
     
-    def check_arrived(self, V_array):
+    def check_arrived(self, wp_err, V_array):
         # Lateral Waypoint checker
         # Check based on along-track error
 
-        # Switch when remaining distance to w1 is less than the *current* look-ahead
+        scalar_proj = np.dot(V_array, wp_err) / np.linalg.norm(wp_err)   #velocity towards waypoint 
 
-        Vg = max(np.linalg.norm(V_array[:2]), 1e-3)
-        Ld_nom = np.clip(
-            Vg * self.lookahead_time_s, self.lookahead_min_m, self.lookahead_max_m
-        )
-        threshold = max(self.wpt_switching_distance, Ld_nom)
+        time_to_waypoint = np.linalg.norm(wp_err) / scalar_proj
+        
+        # Switch when remaining distance to wayopoint is less than the current look ahead time 
+        threshold = 2;
 
         # along_remaining is the distance to the next waypoint along the segment
-        if along_track_err < threshold:
+        if time_to_waypoint < threshold:
             self.current_WP_ind += 1
-            print(f"Waypoint reached, going to waypoint {self.current_WP_ind}...")
-
+            
         return self.current_WP_ind
