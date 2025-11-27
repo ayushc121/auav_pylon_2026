@@ -50,23 +50,21 @@ class XTrack_NAV_lookAhead:
 
         horz_dist_err = np.sqrt(x_err**2 + y_err**2)  # horizontal distance from next waypoint
 
-        # Compute desired pitch
-        if horz_dist_err == 0:
-            des_gamma = 0
-        else:
-            des_gamma = np.arctan(z_err / horz_dist_err)     #radians, will be measured from the horizontal
+        des_gamma = np.arctan2(z_err, horz_dist_err)     #radians, will be measured from the horizontal
 
         des_heading = np.arctan2(y_err, x_err)
         
         return des_gamma, des_heading, wp_err
 
 
-    def wp_tracker(self, waypoint):
+    def wp_tracker(self, waypoints, x_est, y_est, z_est):
 
         self.next_wpt = waypoints[self.current_WP_ind]
         
         if self.current_WP_ind != 0:
             self.prev_wpt = waypoints[self.current_WP_ind - 1]
+
+        self.current_pose_est = [x_est, y_est, z_est]
 
         # Compute Desired Speed, Desired Heading, Desired Glide Path
         des_gamma, des_heading, wp_err = (self.get_desired_flight(self.next_wpt, self.current_pose_est))
@@ -82,8 +80,8 @@ class XTrack_NAV_lookAhead:
 
         time_to_waypoint = np.linalg.norm(wp_err) / scalar_proj
         
-        # Switch when remaining distance to wayopoint is less than the current look ahead time 
-        threshold = 2;
+        # Switch when remaining time to wayopoint is less than the current look ahead time 
+        threshold = 2
 
         # along_remaining is the distance to the next waypoint along the segment
         if time_to_waypoint < threshold:
