@@ -107,7 +107,7 @@ class TECSControl_cub:
                + self.weight * ( self.param.K_thrustp * (gamma_est + vdot_est / self.g)
                                  + self.param.K_thrusti * self.error_norm_Es_dot_integral ) )
 
-        thrust = float(np.clip(thrust_unsat + 0.2, 0.0, self.thr_max))
+        thrust = float(np.clip(thrust_unsat, 0.0, self.thr_max))
 
         # Thrust anti-windup
         # If at upper limit and error > 0, integrating would push further into sat -> freeze integral.
@@ -127,10 +127,10 @@ class TECSControl_cub:
 
         #-------------------Desired Pitch-------------------#
         #Energy rate distribution term error
-        error_dist_term = (r_gamma - gamma_est) - (r_V_dot - vdot_est) / self.g
+        error_dist_term = (r_gamma - gamma_est) / self.g
 
         #Desired pitch
-        pitch_unsat = self.param.K_pitchi * self.error_dist_term_integral - self.param.K_pitchp * (gamma_est - vdot_est / self.g)
+        pitch_unsat = self.param.K_pitchi * self.error_dist_term_integral - self.param.K_pitchp * (gamma_est / self.g)
 
         pitch = float(np.clip(pitch_unsat, np.deg2rad(-20), np.deg2rad(20)))
 
@@ -196,12 +196,10 @@ class TECSControl_cub:
             self.error_pitch_integral = -self.param.pitch_integral_max
         
         #Control commands for elevator
-        elev_cmd = self.param.trim_elev + (self.param.K_elevp * error_pitch + self.param.K_elevi * self.error_pitch_integral) + self.param.K_q * error_q
+        elev_cmd = self.param.trim_elev + (self.param.K_elevp * error_pitch * 2 + self.param.K_elevi * 7 * self.error_pitch_integral) + self.param.K_q * error_q
         elev_cmd += ele_ff_phi # feed-forward elevator wrt to roll angle
         elev_cmd = np.clip(elev_cmd, -1,1 ) #Saturation
 
-        #-------------------Throttle Control-------------------#
-        self.throttle_cmd = np.clip(ref_thrust / self.thr_max, 0.0 ,1.0) # This bypasses the throttle and assume throttle level is the thrust percentage
 
         # #-------------------Lateral Heading Control using WP_NAV-------------------#
         chi     = np.arctan2(vy_est, vx_est) # current ground course track angle
@@ -210,7 +208,7 @@ class TECSControl_cub:
         if abs(chi_err) < self.chi_deadband:   # small deadband to prevent sudden flip near wrap
             chi_err = 0.0
 
-        chi_dot_des = self.param.k_chi * chi_err  # desired yaw rate to correct heading error
+        chi_dot_des = self.param.k_chi * chi_err   # desired yaw rate to correct heading error
         Vg = max(V_est, 0.05) #ground speed, avoid div by zero
         phi_des = np.arctan2(Vg * chi_dot_des , self.g) # Balmer, "Modelling and Control of a Fixed-wing UAV for Landings on Mobile Landing Platforms" (eqn 3.3)
 
@@ -260,11 +258,16 @@ class TECSControl_cub:
             ail_cmd = float(np.clip(ail_cmd, -1.0, 1.0))
 
 
+        #-------------------Throttle Control-------------------#
+        self.throttle_cmd = 1
+        self.throttle_cmd -= np.abs(roll/np.pi*2.25)
+
+
         # #-------------------Coordinated Turn Control-------------------#
-        if (np.abs(ail_cmd) >= 0.2):
-            rud_cmd = ail_cmd*0.15
-            rud_cmd = np.clip(rud_cmd,-1,1)
-        else: rud_cmd = 0
+        rud_cmd = 0
+
+        if np.abs(ail_cmd) > 0.2:
+            rud_cmd = ail_cmd*0.7
 
         #Set history variables
         self.prev_x = x
