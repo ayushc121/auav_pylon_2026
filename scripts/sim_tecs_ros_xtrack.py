@@ -353,7 +353,7 @@ class PIDPublisher(Node):
 
         ######################################## FLIGHT MODE ####################################
         flight_mode_msg = String()
-        if (self.z <= 1.0) and self.end_cruise == False:
+        if (self.z <= 1) and self.end_cruise == False:
             new_mode = "takeoff"
         else:
             new_mode = "airborne"
@@ -377,8 +377,7 @@ class PIDPublisher(Node):
         if self.flight_mode == "takeoff":
             self.takeoff_time += self.dt
 
-            # Throttle ramp with floor/ceiling
-            self.throttle = ca.fmin(1.0, ca.fmax(0.7, self.throttle + 2.0 * self.dt))
+            self.throttle = 1
 
             self.rudder = 0.0  # No yaw during takeoff
             self.aileron = 0.0  # Wings-level during takeoff
@@ -418,16 +417,15 @@ class PIDPublisher(Node):
             else:
                 v_array = [self.vx_est, self.vy_est, self.vz_est]
 
-                des_v, des_gamma, des_heading, along_track_err, cross_track_err = (
+                des_gamma, des_heading, wp_err = (
                     self.wpt_planner.wp_tracker(
                         control_point,
                         self.x_est,
                         self.y_est,
                         self.z_est,
-                        v_array,
-                        verbose=False,
                     )
                 )
+                des_v = 10
 
                 ## Calculating Desired Acceleration based on desired velocity
                 if self.prev_v is None:
@@ -453,7 +451,7 @@ class PIDPublisher(Node):
                     )
                 )
                 self.current_WP_ind = self.wpt_planner.check_arrived(
-                    along_track_err, v_array, verbose=False
+                    wp_err, v_array
                 )
 
                 self.get_logger().info(
