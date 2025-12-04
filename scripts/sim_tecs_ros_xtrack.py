@@ -25,9 +25,9 @@ alt = 7.0
 control_point = [
     (-10, -5, alt),
     (-25.0, -10, alt),
-    (-25, -40.0, alt),
-    (30.00, -30.0, alt),
-    (30, 0, alt),
+    (-20, -30.0, alt),
+    (25, -30.0, alt),
+    (25, -10, alt),
     (10, 0, alt),
     (-10, -5, alt),
 ]  # Rectangle Circuit Full Facility, const altitude
