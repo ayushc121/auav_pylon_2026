@@ -22,12 +22,13 @@ def wrap(x):
 
 # ## SIM
 alt = 3.0
-control_point = [    
-    (19, 0, alt),
-    (4, 7, alt),
-    (-9, 0, alt),
-    (19, 0, alt),
-]  # Rectangle Circuit Full Facility, const altitude
+control_point = [
+    (-12, -8, alt),
+    (-12, 8, alt),
+    (22, 8, alt),
+    (22, -8, alt),
+    (-12, -8, alt)
+]
 
 # Get coordinates for reference line
 ref_x_list = [point[0] for point in control_point]
@@ -374,7 +375,7 @@ class PIDPublisher(Node):
         if self.flight_mode == "takeoff":
             self.takeoff_time += self.dt
 
-            self.throttle = 1
+            self.throttle = 0.85
 
             self.rudder = 0.0  # No yaw during takeoff
             self.aileron = 0.0  # Wings-level during takeoff
