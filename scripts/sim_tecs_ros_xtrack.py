@@ -21,7 +21,7 @@ def wrap(x):
 
 
 # ## SIM
-alt = 7.0
+alt = 3.0
 control_point = [    
     (-5, -5, alt),
     (-22, -7.5, alt),     #change this one to be -25 for the first coordinate to make it cut less closely...
