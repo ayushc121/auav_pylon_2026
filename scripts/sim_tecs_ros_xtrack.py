@@ -24,7 +24,7 @@ def wrap(x):
 alt = 3.0
 control_point = [    
     (19, 0, alt),
-    (-9, -30.0, alt),
+    (-9, 0, alt),
     (19, 0, alt),
 ]  # Rectangle Circuit Full Facility, const altitude
 
