@@ -196,8 +196,8 @@ class TECSControl_cub:
             self.error_pitch_integral = -self.param.pitch_integral_max
         
         #Control commands for elevator
-        elev_cmd = self.param.trim_elev + (self.param.K_elevp * error_pitch * 2 + self.param.K_elevi * 7 * self.error_pitch_integral) + self.param.K_q * error_q
-        elev_cmd += ele_ff_phi # feed-forward elevator wrt to roll angle
+        elev_cmd = self.param.trim_elev + (self.param.K_elevp * error_pitch + self.param.K_elevi * self.error_pitch_integral) + self.param.K_q * error_q
+        elev_cmd += ele_ff_phi*1.05 # feed-forward elevator wrt to roll angle
         elev_cmd = np.clip(elev_cmd, -1,1 ) #Saturation
 
 
@@ -208,14 +208,17 @@ class TECSControl_cub:
         if abs(chi_err) < self.chi_deadband:   # small deadband to prevent sudden flip near wrap
             chi_err = 0.0
 
-        chi_dot_des = self.param.k_chi * chi_err   # desired yaw rate to correct heading error
+        chi_dot_des = self.param.k_chi * chi_err  # desired yaw rate to correct heading error
         Vg = max(V_est, 0.05) #ground speed, avoid div by zero
         phi_des = np.arctan2(Vg * chi_dot_des , self.g) # Balmer, "Modelling and Control of a Fixed-wing UAV for Landings on Mobile Landing Platforms" (eqn 3.3)
 
         phi_des = float(np.clip(phi_des, -self.phi_lim, self.phi_lim)) 
         dphi_max = self.phi_dot_lim * self.dt
-        phi_des = np.clip(phi_des - self._phi_cmd, -dphi_max, dphi_max) + self._phi_cmd
-        self._phi_cmd = float(np.clip(phi_des, -self.phi_lim, self.phi_lim))
+        phi_des = np.clip(phi_des - self._phi_cmd, -dphi_max, dphi_max) + self._phi_cmd * 1.025
+        self._phi_cmd = float(np.clip(phi_des, -self.phi_lim*1.5, self.phi_lim*1.5))
+
+        phidk = 1
+        phipk = 1
 
         # innter loop roll control modes
         if self.roll_mode == "stabilized":
@@ -229,9 +232,9 @@ class TECSControl_cub:
             d_term = - self.param.K_phi_d * p_est    # p_est in rad/s
 
             ail_cmd = ( self.param.trim_ail
-                + self.param.K_phi_p * e_phi
+                + self.param.K_phi_p * e_phi * phipk
                 + self.param.K_phi_i * self._e_phi_int
-                + d_term )
+                + d_term * phidk)
 
             ail_cmd = float(np.clip(ail_cmd, -self.param.da_max, self.param.da_max))
 
@@ -252,22 +255,22 @@ class TECSControl_cub:
                 self.error_r_integral = -self.param.r_integral_max
 
             ail_cmd = (self.param.trim_ail
-                   + self.param.K_deltap * err_yaw
+                   + self.param.K_deltap * err_yaw * phipk
                    + self.param.K_deltai * self.error_r_integral
-                   + self.param.K_deltad * error_r_deriv)
+                   + self.param.K_deltad * error_r_deriv * phidk)
             ail_cmd = float(np.clip(ail_cmd, -1.0, 1.0))
 
 
         #-------------------Throttle Control-------------------#
-        self.throttle_cmd = 1
-        self.throttle_cmd -= np.abs(roll/np.pi*2.25)
+        self.throttle_cmd = 0.5
+        self.throttle_cmd -= min(np.abs(phi_des/2.5), 0.15)
+        self.throttle_cmd += 0.1*elev_cmd
 
 
         # #-------------------Coordinated Turn Control-------------------#
         rud_cmd = 0
-
-        if np.abs(ail_cmd) > 0.2:
-            rud_cmd = ail_cmd*0.7
+       # if np.abs(ail_cmd) > 0.35:
+        #  rud_cmd = ail_cmd*0.2       #MAKES STEERING TOO SHARP TO TUNE...
 
         #Set history variables
         self.prev_x = x
